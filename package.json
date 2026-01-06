@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "build:gh-pages": "NODE_ENV=production vite build"
+    "build:gh-pages": "NODE_ENV=production vite build",
+    "generate-icons": "node scripts/generate-icons.js",
+    "prebuild": "npm run generate-icons"
   },
   "dependencies": {
     "lucide-react": "^0.562.0",
@@ -17,7 +19,9 @@
   "devDependencies": {
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "sharp": "^0.33.0",
     "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "vite": "^6.2.0",
+    "vite-plugin-pwa": "^0.21.0"
   }
 }

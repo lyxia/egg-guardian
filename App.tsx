@@ -4,6 +4,7 @@ import { loadState, saveState, checkWeeklySalaryReset, processSettlement } from 
 import Dashboard from './components/Dashboard';
 import Settings from './components/Settings';
 import SettlementModal from './components/SettlementModal';
+import InstallPrompt from './components/InstallPrompt';
 import { Settings as SettingsIcon, LayoutDashboard, History } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -119,6 +120,9 @@ const App: React.FC = () => {
           onCancel={() => setIsSettlementOpen(false)} 
         />
       )}
+
+      {/* PWA Install Prompt */}
+      <InstallPrompt />
     </div>
   );
 };

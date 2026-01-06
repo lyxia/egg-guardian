@@ -1,8 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { UserProfile, Task, DailyLog } from '../types';
 import { calculateStarValue, getTodayDateString } from '../services/dataService';
 import StarRating from './StarRating';
-import { Shield, Coins, CalendarDays, ChevronRight } from 'lucide-react';
+import SalarySlipList from './SalarySlipList';
+import { Shield, Coins, CalendarDays, ChevronRight, History } from 'lucide-react';
 
 interface DashboardProps {
   user: UserProfile;
@@ -12,6 +13,7 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ user, tasks, onStartSettlement, logs }) => {
+  const [isSalarySlipOpen, setIsSalarySlipOpen] = useState(false);
   const todayStr = getTodayDateString();
   const hasSettledToday = logs.some(log => log.date === todayStr);
 
@@ -62,6 +64,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, tasks, onStartSettlement, l
           <div className="hidden md:block mt-8 opacity-80 text-sm text-blue-100 leading-relaxed">
              <p>记得每天完成任务，守护你的每一枚蛋币！只有守护成功的蛋币才能在周末兑换游戏时间哦。</p>
           </div>
+
+          {/* Salary Slip Button */}
+          <button
+            onClick={() => setIsSalarySlipOpen(true)}
+            className="mt-6 w-full bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white font-bold py-3 rounded-2xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2"
+          >
+            <History size={20} />
+            查看工资条
+          </button>
         </div>
       </div>
 
@@ -128,6 +139,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, tasks, onStartSettlement, l
           )}
         </div>
       </div>
+
+      {/* Salary Slip Modal */}
+      {isSalarySlipOpen && (
+        <SalarySlipList 
+          logs={logs} 
+          onClose={() => setIsSalarySlipOpen(false)} 
+        />
+      )}
     </div>
   );
 };
