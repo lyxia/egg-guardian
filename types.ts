@@ -30,9 +30,11 @@ export interface DailyLog {
   date: string; // YYYY-MM-DD
   base_salary: number;
   tasks_status: TaskStatus[];
-  net_income: number;
+  net_income: number; // 保留向后兼容，等于 actual_amount
   total_stars: number;
   star_value: number;
+  deduction: number; // 扣除金额
+  actual_amount: number; // 实际领取金额 = base_salary - deduction
 }
 
 export interface AppState {

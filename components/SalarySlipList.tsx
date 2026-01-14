@@ -66,19 +66,40 @@ const SalarySlipList: React.FC<SalarySlipListProps> = ({ logs, onClose }) => {
                 key={log.date} 
                 className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
               >
-                <div className="flex items-center justify-between">
+                {/* 日期 */}
+                <div className="flex items-center justify-between mb-4">
                   <div className="flex-1">
                     <div className="text-sm text-gray-500 mb-1">日期</div>
                     <div className="text-lg font-bold text-gray-800">
                       {formatDate(log.date)}
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-sm text-gray-500 mb-1">基础工资</div>
-                    <div className="text-2xl font-extrabold text-guardian-blue">
-                      {log.base_salary.toLocaleString()}
+                </div>
+
+                {/* 工资明细 */}
+                <div className="space-y-2">
+                  {/* 基础工资 */}
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500">基础工资</span>
+                    <span className="font-bold text-gray-800">{log.base_salary} 蛋币</span>
+                  </div>
+                  
+                  {/* 扣除金额（如果有） */}
+                  {(log.deduction ?? 0) > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-500">扣除金额</span>
+                      <span className="font-bold text-red-500">
+                        -{log.deduction} 蛋币
+                      </span>
                     </div>
-                    <div className="text-xs text-gray-400 mt-1">蛋币</div>
+                  )}
+                  
+                  {/* 实际领取 */}
+                  <div className="flex justify-between pt-2 border-t border-gray-200">
+                    <span className="text-sm font-bold text-gray-700">实际领取</span>
+                    <span className="text-xl font-extrabold text-green-500">
+                      {log.actual_amount ?? log.net_income} 蛋币
+                    </span>
                   </div>
                 </div>
               </div>

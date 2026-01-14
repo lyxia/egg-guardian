@@ -127,111 +127,36 @@ export const processSettlement = (
   const { totalStars, valuePerStar, todaysTasks } = calculateStarValue(tasks);
   
   const tasks_status: TaskStatus[] = [];
-  let totalReward = 0; // 奖励制：计算获得的奖励
+  let totalDeduction = 0; // 扣除制：计算未完成任务的扣除
 
   todaysTasks.forEach(task => {
-    const isCompleted = !!completionMap[task.id];
-    // 完成任务获得奖励，未完成不获得奖励（不扣除）
-    const reward = isCompleted ? (valuePerStar * task.stars) : 0;
+    const isCompleted = completionMap[task.id] === true; // 只有明确为 true 才算完成
+    // 未完成任务计算扣除金额
+    const taskDeduction = isCompleted ? 0 : Math.floor(valuePerStar * task.stars);
     
     tasks_status.push({
       task_id: task.id,
       completed: isCompleted,
-      deduction: 0 // deduction 字段保留为0，因为不再扣除
+      deduction: taskDeduction // 记录实际扣除值
     });
 
-    totalReward += reward;
+    totalDeduction += taskDeduction;
   });
 
-  // Calculate Net Income: 572 (Theoretical) - Deductions
-  // However, the prompt says: "If all done -> 572 added". 
-  // "If not done -> deduct from balance".
-  // Actually the prompt says: "Daily Check: Daily salary ~572. If all done -> 572 pocketed. If not -> deduct from balance based on stars."
-  // Wait, does "pocketed" mean added to balance? 
-  // "周薪制: System sends 4000 on Monday... daily check decides if they KEEP it."
-  // So the 4000 is ALREADY in the balance on Monday.
-  // The daily check is purely about DEDUCTING what you didn't earn.
-  // If I finish everything, I deduct 0. My balance stays high.
-  // If I fail a task, I deduct X. My balance drops.
-  // 
-  // Let's re-read carefully: "If all done -> 572 all in pocket (balance unchanged)." 
-  // YES. The money was front-loaded.
-  // "If not done -> deduct corresponding amount from balance."
-  
-  // So Net Income for the log is actually negative or zero relative to the user's current balance state?
-  // Or should we log the "Virtual Income"? 
-  // The prompt says "Income Animation: +287". 
-  // This contradicts the "Front-loaded" theory slightly OR it means we are showing "You kept +287".
-  // Let's stick to the Prompt 4.2: "Input animation: +287... Gold coins fly into total balance."
-  // AND Prompt 2.2: "Monday auto distribute 4000".
-  // Combining these:
-  // Monday: +4000.
-  // Tuesday Daily Check: "You kept 572". 
-  // If I fail tasks worth 285. I kept 287.
-  // If the logic is "Balance Unchanged" when full, it means the 4000 is already there.
-  // If I fail, I lose money.
-  // 
-  // VISUAL TRICK: 
-  // The User perceives "Earning". 
-  // But mathematically: Balance = Balance - Deduction.
-  // Wait, if I click "Claim", and it shows "+287", it implies Balance increases.
-  // IF Balance increases daily, then the 4000 shouldn't be given on Monday?
-  // Prompt 2.2 says: "System distributes 4000 on Monday".
-  // Prompt 2.2 says: "If tasks incomplete -> deduct from balance".
-  // This implies the 4000 IS in the balance.
-  // So "Earning +287" is a "Psychological" earning (You saved this amount!).
-  // BUT Prompt 4.2 says "Gold coins fly into total balance". This usually implies addition.
-  // 
-  // Interpretation A (Front-loaded): Balance starts high. Bad behavior reduces it. "Claiming" is just "Confirming no deduction".
-  // Interpretation B (Accrual): "This is the budget". You unlock it daily.
-  // 
-  // Let's look at Prompt 2.1: "Unified currency... Single Pool".
-  // Prompt 2.2 "Week Salary... System auto distributes 4000 to account".
-  // "Daily Check... If all done -> 572 pocketed (balance unchanged)".
-  // THIS CONFIRMS FRONT-LOADED.
-  // "If not done -> deduct...".
-  // 
-  // So the "Settlement" visual of "+287" might be confusing if we add it. 
-  // Actually, if "Balance Unchanged" means "No Deduction", then the visual should probably be "You kept 287!".
-  // Or maybe the prompt implies: We SHOW +287 as "This is what you secured today", but we only subtract the difference?
-  // 
-  // Let's implement EXACTLY:
-  // 1. Monday: Balance += 4000.
-  // 2. Daily Settlement: 
-  //    Calculate Deductions. 
-  //    NewBalance = OldBalance - Deductions.
-  //    Visual: "You guarded 287!" (if 285 was lost). 
-  //    The prompt 4.2 says: "Show actual income amount (e.g., +287)... Coins fly into balance."
-  //    This is contradictory if balance decreases.
-  //    
-  //    *Hypothesis*: The user wants the KID to feel like they are earning. 
-  //    Maybe the "4000" is a "Pending Budget" visualization, not immediately in `user.balance`?
-  //    "System distributes 4000 to account" sounds immediate.
-  //    
-  //    Let's go with the most robust interpretation for a "Guardian" app (Risk/Loss aversion):
-  //    The money is in the account.
-  //    We highlight LOSS.
-  //    If there is a deduction, we show "-285" (Red).
-  //    If we kept money, we show "Guarded +287" (Yellow/Green) but mathematically we just DON'T subtract it.
-  //    
-  //    However, to satisfy "Coins fly into balance":
-  //    Maybe the "Available Balance" is what they can spend.
-  //    Let's stick to the math: Balance = Balance - Deduction.
-  //    The "Net Income" in the log will be (572 - Deduction).
-  
-  // 奖励制：余额只增加不减少
-  // 全部完成 = +572，部分完成 = +部分金额，未完成 = +0
-  const netIncome = totalReward;
+  // 扣除制计算：实际领取金额 = 基础工资 - 扣除金额
+  const actualAmount = DAILY_SALARY_TARGET - totalDeduction;
   
   return {
     log: {
       date: getTodayDateString(),
       base_salary: DAILY_SALARY_TARGET,
       tasks_status,
-      net_income: netIncome,
+      net_income: actualAmount, // 向后兼容，等于 actual_amount
       total_stars: totalStars,
-      star_value: valuePerStar
+      star_value: valuePerStar,
+      deduction: totalDeduction, // 新增：扣除金额
+      actual_amount: actualAmount // 新增：实际领取金额
     },
-    newUserBalance: user.balance + totalReward // 余额增加，不减少
+    newUserBalance: user.balance + actualAmount // 余额增加实际领取金额
   };
 };

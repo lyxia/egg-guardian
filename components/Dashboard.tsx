@@ -21,9 +21,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, tasks, onStartSettlement, l
     return calculateStarValue(tasks);
   }, [tasks]);
 
-  const dayOfWeek = new Date().getDay() || 7; // 1-7 (Mon-Sun)
-  const daysPassed = dayOfWeek - 1;
-  const estimatedRemainingBase = Math.max(0, 4000 - (daysPassed * 572));
+
 
   return (
     <div className="flex flex-col h-full md:flex-row md:gap-8 transition-all">
@@ -36,7 +34,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, tasks, onStartSettlement, l
 
           <div className="flex justify-between items-start z-10 relative">
             <div>
-              <p className="text-blue-100 font-medium mb-1">当前总余额</p>
+              <p className="text-blue-100 font-medium mb-2">工资卡余额</p>
               <h1 className="text-5xl font-extrabold flex items-center gap-2">
                 {user.balance.toLocaleString()}
                 <span className="text-2xl">💰</span>
@@ -46,29 +44,16 @@ const Dashboard: React.FC<DashboardProps> = ({ user, tasks, onStartSettlement, l
               <Shield size={32} className="text-white" />
             </div>
           </div>
-
-          <div className="mt-6">
-            <div className="flex justify-between text-sm text-blue-100 mb-2">
-              <span>本周基础工资池</span>
-              <span>剩余 ≈ {estimatedRemainingBase}</span>
-            </div>
-            <div className="h-3 bg-blue-900/20 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-guardian-yellow rounded-full transition-all duration-1000"
-                style={{ width: `${(estimatedRemainingBase / 4000) * 100}%` }}
-              ></div>
-            </div>
-          </div>
           
           {/* Desktop-only extra info or illustration could go here */}
-          <div className="hidden md:block mt-8 opacity-80 text-sm text-blue-100 leading-relaxed">
+          <div className="hidden md:block mt-10 opacity-80 text-sm text-blue-100 leading-relaxed">
              <p>记得每天完成任务，守护你的每一枚蛋币！只有守护成功的蛋币才能在周末兑换游戏时间哦。</p>
           </div>
 
           {/* Salary Slip Button */}
           <button
             onClick={() => setIsSalarySlipOpen(true)}
-            className="mt-6 w-full bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white font-bold py-3 rounded-2xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2"
+            className="mt-8 md:mt-10 w-full bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white font-bold py-3 rounded-2xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2"
           >
             <History size={20} />
             查看工资条

@@ -8,6 +8,21 @@ const EGGFOCUS_COIN_RECORDS_KEY = 'eggfocus-coin-records';
 const EGG_GUARDIAN_KEY = 'egg_guardian_data_v1';
 
 /**
+ * 迁移旧格式的日志数据，为缺失字段推导值
+ */
+const migrateLog = (log: DailyLog): DailyLog => {
+  // 如果缺少新字段，从现有数据推导
+  if (log.deduction === undefined || log.actual_amount === undefined) {
+    return {
+      ...log,
+      deduction: log.base_salary - log.net_income,
+      actual_amount: log.net_income
+    };
+  }
+  return log;
+};
+
+/**
  * 从 localStorage 读取 eggfocus 用户数据
  */
 export const loadEggfocusUserData = (): EggfocusUserData | null => {
@@ -109,10 +124,10 @@ export const convertToEggGuardian = (
   if (coinRecords && coinRecords.state.records.length > 0) {
     const logsMap = new Map<string, DailyLog>();
     
-    // 先保留现有的日志
+    // 先保留现有的日志，并进行数据迁移
     if (existingState?.logs) {
       existingState.logs.forEach(log => {
-        logsMap.set(log.date, log);
+        logsMap.set(log.date, migrateLog(log));
       });
     }
 
@@ -127,6 +142,7 @@ export const convertToEggGuardian = (
         if (existingLog) {
           // 如果当天已有日志，更新净收入
           existingLog.net_income += record.amount;
+          existingLog.actual_amount = (existingLog.actual_amount || 0) + record.amount;
         } else {
           // 创建新日志（简化版本，因为 eggfocus 记录不包含任务状态）
           logsMap.set(dateStr, {
@@ -136,6 +152,8 @@ export const convertToEggGuardian = (
             net_income: record.amount,
             total_stars: 0,
             star_value: 0,
+            deduction: 0,
+            actual_amount: record.amount,
           });
         }
       });
@@ -263,7 +281,15 @@ export const loadSyncedState = (): AppState => {
   }
 
   // 如果没有 eggfocus 数据，使用现有的 egg-guardian 数据或默认值
-  return existingState || {
+  // 对现有日志进行数据迁移
+  if (existingState) {
+    return {
+      ...existingState,
+      logs: existingState.logs.map(migrateLog),
+    };
+  }
+  
+  return {
     user: INITIAL_USER,
     tasks: INITIAL_TASKS,
     logs: [],

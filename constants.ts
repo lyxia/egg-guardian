@@ -5,7 +5,7 @@ export const DAILY_SALARY_TARGET = 572; // 4000 / 7 rounded
 
 export const INITIAL_USER: UserProfile = {
   user_id: "kid_001",
-  balance: 3850,
+  balance: 0,
   guardian_config: {
     weekly_base_salary: WEEKLY_SALARY,
     last_salary_date: "2025-12-29" // Set to a past date to trigger logic check
