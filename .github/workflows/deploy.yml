@@ -104,8 +104,34 @@ jobs:
           wrangler pages deploy dist \
             --project-name=egg-guardian \
             --branch=main \
-            --commit-dirty=true \
-            --service-binding=API=egg-guardian-api
+            --commit-dirty=true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Configure Service Binding
+        run: |
+          # Configure the Service Binding for the Pages project
+          # This binds the Worker (egg-guardian-api) to the Pages Functions environment variable 'API'
+          ACCOUNT_ID="${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"
+          PROJECT_NAME="egg-guardian"
+
+          # Get project details to find the environment
+          curl -X PATCH "https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/pages/projects/${PROJECT_NAME}" \
+            -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            --data '{
+              "deployment_configs": {
+                "production": {
+                  "services": {
+                    "API": {
+                      "service": "egg-guardian-api",
+                      "environment": "production"
+                    }
+                  }
+                }
+              }
+            }'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -114,10 +140,20 @@ jobs:
         run: |
           echo "✅ Deployment complete!"
           echo "📦 Database: egg-guardian-db (${{ steps.d1-setup.outputs.database_id }})"
-          echo "⚡ Worker: egg-guardian-api"
+          echo "⚡ Worker: egg-guardian-api (production)"
           echo "🌐 Pages: egg-guardian"
+          echo "🔗 Service Binding: API → egg-guardian-api"
           echo ""
           echo "Next steps:"
-          echo "1. Configure custom domain in Cloudflare Pages dashboard"
-          echo "2. Point childrenlearn.activing.fun to egg-guardian.pages.dev"
-          echo "3. Test the deployment at your custom domain"
+          echo "1. Verify Service Binding in Cloudflare Pages dashboard:"
+          echo "   Settings → Functions → Service bindings"
+          echo "   Should see: API = egg-guardian-api"
+          echo ""
+          echo "2. Configure custom domain:"
+          echo "   Pages → egg-guardian → Custom domains"
+          echo "   Add: childrenlearn.activing.fun"
+          echo ""
+          echo "3. Test the deployment:"
+          echo "   - Frontend: https://egg-guardian.pages.dev"
+          echo "   - API health: https://egg-guardian.pages.dev/api/health"
+          echo "   - Custom domain (after DNS): https://childrenlearn.activing.fun"
