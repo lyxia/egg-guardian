@@ -34,14 +34,29 @@ jobs:
         run: |
           cd api
           # Try to get existing database
-          DB_ID=$(wrangler d1 list --json | jq -r '.[] | select(.name=="egg-guardian-db") | .uuid')
+          DB_LIST=$(wrangler d1 list --json 2>&1) || true
+          DB_ID=$(echo "$DB_LIST" | jq -r '.[] | select(.name=="egg-guardian-db") | .uuid' 2>/dev/null || echo "")
 
           if [ -z "$DB_ID" ]; then
             echo "Creating new D1 database..."
-            DB_ID=$(wrangler d1 create egg-guardian-db --json | jq -r '.uuid')
-            echo "Created database with ID: $DB_ID"
+            DB_OUTPUT=$(wrangler d1 create egg-guardian-db --json 2>&1)
+            DB_ID=$(echo "$DB_OUTPUT" | jq -r '.uuid' 2>/dev/null || echo "")
+
+            if [ -n "$DB_ID" ]; then
+              echo "Created database with ID: $DB_ID"
+            else
+              echo "Failed to create database. Output:"
+              echo "$DB_OUTPUT"
+              # Try to extract ID from list if creation reported it already exists
+              DB_ID=$(wrangler d1 list --json 2>&1 | jq -r '.[] | select(.name=="egg-guardian-db") | .uuid' 2>/dev/null || echo "")
+            fi
           else
             echo "Using existing database with ID: $DB_ID"
+          fi
+
+          if [ -z "$DB_ID" ]; then
+            echo "Error: Could not get or create database ID"
+            exit 1
           fi
 
           echo "database_id=$DB_ID" >> $GITHUB_OUTPUT
@@ -115,15 +130,16 @@ jobs:
         id: pages-setup
         run: |
           # Check if project exists
-          PROJECT_EXISTS=$(wrangler pages project list --json 2>/dev/null | jq -r '.[] | select(.name=="egg-guardian") | .name' || echo "")
+          PROJECT_LIST=$(wrangler pages project list --json 2>&1) || true
 
-          if [ -z "$PROJECT_EXISTS" ]; then
-            echo "Creating Pages project: egg-guardian"
-            wrangler pages project create egg-guardian --production-branch=main
-            echo "project_created=true" >> $GITHUB_OUTPUT
-          else
+          # Check if the output contains the project name (works even if JSON parsing fails)
+          if echo "$PROJECT_LIST" | grep -q "egg-guardian"; then
             echo "Pages project already exists: egg-guardian"
             echo "project_created=false" >> $GITHUB_OUTPUT
+          else
+            echo "Creating Pages project: egg-guardian"
+            wrangler pages project create egg-guardian --production-branch=main || true
+            echo "project_created=true" >> $GITHUB_OUTPUT
           fi
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
