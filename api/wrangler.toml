@@ -19,7 +19,7 @@ CALLBACK_URL = "https://childrenlearn.activing.fun/api/auth/callback"
 # IMPORTANT: Set JWT_SECRET using: wrangler secret put JWT_SECRET --env production
 [env.production]
 name = "egg-guardian-api"
-vars = { SSO_URL = "https://api.activing.fun", ALLOWED_ORIGIN = "https://childrenlearn.activing.fun", CALLBACK_URL = "https://childrenlearn.activing.fun/auth/callback" }
+vars = { SSO_URL = "https://api.activing.fun", ALLOWED_ORIGIN = "https://childrenlearn.activing.fun", CALLBACK_URL = "https://childrenlearn.activing.fun/api/auth/callback" }
 # 开发环境配置
 [env.development]
 name = "egg-guardian-api-dev"
@@ -32,5 +32,5 @@ database_id = "1c17aa9f-90bf-4e6b-a650-0360519a42c1"
 [env.development.vars]
 SSO_URL = "http://localhost:8791"
 ALLOWED_ORIGIN = "https://childrenlearn.activing.fun"
-CALLBACK_URL = "https://childrenlearn.activing.fun/auth/callback"
+CALLBACK_URL = "https://childrenlearn.activing.fun/api/auth/callback"
 # JWT_SECRET for dev can be set via wrangler secret or use a dev default

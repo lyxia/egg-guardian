@@ -99,6 +99,18 @@ jobs:
         env:
           NODE_ENV: production
 
+      - name: Copy Functions and Routes to dist
+        run: |
+          echo "Copying functions directory to dist..."
+          cp -r functions dist/
+          echo "Copying _routes.json to dist..."
+          cp _routes.json dist/
+          echo "Copy completed successfully"
+          echo "Contents of dist/:"
+          ls -la dist/
+          echo "Contents of dist/functions/:"
+          ls -la dist/functions/
+
       - name: Create or Check Pages Project
         id: pages-setup
         run: |
