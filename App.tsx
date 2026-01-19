@@ -7,6 +7,8 @@ import SettlementModal from './components/SettlementModal';
 import LoginPage from './components/LoginPage';
 import { Settings as SettingsIcon, LayoutDashboard, History } from 'lucide-react';
 import { createAuthService } from './services/authService';
+import { createApiService } from './services/apiService';
+import { setApiService } from './services/apiServiceInstance';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -27,6 +29,21 @@ const App: React.FC = () => {
   const authService = createAuthService(
     import.meta.env.VITE_API_URL || ''
   );
+
+  // 初始化全局 ApiService 实例
+  useEffect(() => {
+    const apiService = createApiService(
+      import.meta.env.VITE_API_URL || '',
+      () => {
+        // Cookie 失效时的处理
+        console.log('Authentication expired, logging out...');
+        authService.logout();
+        setIsAuthenticated(false);
+        setCurrentUserId(null);
+      }
+    );
+    setApiService(apiService);
+  }, []);
 
   // 检查认证状态和处理 SSO 回调
   useEffect(() => {

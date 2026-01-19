@@ -8,6 +8,9 @@ export interface UserProfile {
   balance: number;
   guardian_config: GuardianConfig;
   isMuted?: boolean; // 静音设置，来自 eggfocus
+  parentAuth?: {
+    isPasswordSet: boolean;
+  };
 }
 
 export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0 = Sunday

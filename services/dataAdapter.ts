@@ -1,9 +1,8 @@
-import { AppState, UserProfile, DailyLog, CoinRecord, EggfocusUserData, EggfocusParentAuth, EggfocusCoinRecords } from '../types';
+import { AppState, UserProfile, DailyLog, CoinRecord, EggfocusUserData, EggfocusCoinRecords } from '../types';
 import { INITIAL_USER, INITIAL_TASKS } from '../constants';
 import { getTodayDateString } from './dataService';
 
 const EGGFOCUS_USERDATA_KEY = 'eggfocus-userdata';
-const EGGFOCUS_PARENT_AUTH_KEY = 'eggfocus-parent-auth';
 const EGGFOCUS_COIN_RECORDS_KEY = 'eggfocus-coin-records';
 const EGG_GUARDIAN_KEY = 'egg_guardian_data_v1';
 
@@ -45,32 +44,6 @@ export const saveEggfocusUserData = (data: EggfocusUserData) => {
     localStorage.setItem(EGGFOCUS_USERDATA_KEY, JSON.stringify(data));
   } catch (e) {
     console.error('Failed to save eggfocus user data', e);
-  }
-};
-
-/**
- * 从 localStorage 读取 eggfocus 家长认证数据
- */
-export const loadEggfocusParentAuth = (): EggfocusParentAuth | null => {
-  try {
-    const stored = localStorage.getItem(EGGFOCUS_PARENT_AUTH_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch (e) {
-    console.error('Failed to load eggfocus parent auth', e);
-  }
-  return null;
-};
-
-/**
- * 保存 eggfocus 家长认证数据到 localStorage
- */
-export const saveEggfocusParentAuth = (data: EggfocusParentAuth) => {
-  try {
-    localStorage.setItem(EGGFOCUS_PARENT_AUTH_KEY, JSON.stringify(data));
-  } catch (e) {
-    console.error('Failed to save eggfocus parent auth', e);
   }
 };
 

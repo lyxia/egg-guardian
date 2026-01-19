@@ -139,7 +139,7 @@
     - 在每日结算时调用 apiService.createLog()
     - 处理重复创建的冲突（409 错误）
     - _需求: 3.2, 7.2_
-  - [ ] 8.4 实现家长密码云端同步
+  - [x] 8.4 实现家长密码云端同步
     - 修改 setPassword() 调用 apiService.updateParentPassword()
     - 在登录后从云端加载家长密码设置
     - _需求: 10.2, 10.3, 10.5_

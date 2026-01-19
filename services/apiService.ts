@@ -47,20 +47,17 @@ export class ApiError extends Error {
 
 /**
  * ApiService 类
- * 提供统一的 API 调用封装，自动处理认证和错误
+ * 提供统一的 API 调用封装，使用 Cookie 认证
  */
 class ApiService {
   private baseUrl: string;
-  private getToken: () => string | null;
   private onUnauthorized: () => void;
 
   constructor(
     baseUrl: string,
-    getToken: () => string | null,
     onUnauthorized: () => void
   ) {
     this.baseUrl = baseUrl;
-    this.getToken = getToken;
     this.onUnauthorized = onUnauthorized;
   }
 
@@ -71,17 +68,10 @@ class ApiService {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const token = this.getToken();
-    
     // 构建请求头
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
-
-    // 自动添加 Authorization header
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
 
     // 合并用户提供的 headers
     if (options.headers) {
@@ -97,9 +87,9 @@ class ApiService {
         credentials: 'include', // 自动携带 Cookie
       });
 
-      // 处理 401 错误 - Token 无效或过期
+      // 处理 401 错误 - 未授权或 Cookie 过期
       if (response.status === 401) {
-        console.error('API Error: Unauthorized - Token invalid or expired');
+        console.error('API Error: Unauthorized - Cookie invalid or expired');
         this.onUnauthorized();
         throw new ApiError('未授权，请重新登录', 401, 'UNAUTHORIZED');
       }
@@ -189,6 +179,17 @@ class ApiService {
     await this.post<void>('/api/profile/parent-password', { passwordHash });
   }
 
+  /**
+   * 验证家长密码
+   */
+  async verifyParentPassword(passwordHash: string): Promise<boolean> {
+    const result = await this.post<{ isValid: boolean; isPasswordSet: boolean }>(
+      '/api/profile/verify-parent-password',
+      { passwordHash }
+    );
+    return result.isValid;
+  }
+
   // ==================== 任务 API ====================
 
   /**
@@ -254,10 +255,9 @@ class ApiService {
  */
 export function createApiService(
   baseUrl: string,
-  getToken: () => string | null,
   onUnauthorized: () => void
 ): ApiService {
-  return new ApiService(baseUrl, getToken, onUnauthorized);
+  return new ApiService(baseUrl, onUnauthorized);
 }
 
 export default ApiService;

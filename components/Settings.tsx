@@ -2,8 +2,9 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Task, DayOfWeek, UserProfile } from '../types';
 import { Trash2, Plus, GripVertical, Star, X, Volume2, VolumeX, Lock } from 'lucide-react';
 import StarRating from './StarRating';
-import { calculateStarValue, DAILY_SALARY_TARGET, loadParentAuth } from '../services/dataService';
+import { calculateStarValue, DAILY_SALARY_TARGET } from '../services/dataService';
 import ParentAuth from './ParentAuth';
+import { isApiServiceInitialized } from '../services/apiServiceInstance';
 
 interface SettingsProps {
   tasks: Task[];
@@ -37,12 +38,18 @@ const Settings: React.FC<SettingsProps> = ({ tasks, onUpdateTasks, onClose, user
 
   // 检查是否需要家长认证
   useEffect(() => {
-    const auth = loadParentAuth();
-    if (auth?.state.isPasswordSet) {
+    const checkAuth = async () => {
+      // 如果未登录，直接允许访问（降级到无认证模式）
+      if (!isApiServiceInitialized()) {
+        setIsAuthenticated(true);
+        return;
+      }
+
+      // 已登录，显示认证界面
       setShowAuth(true);
-    } else {
-      setIsAuthenticated(true);
-    }
+    };
+
+    checkAuth();
   }, []);
 
   const handleAuthVerified = () => {

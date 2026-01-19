@@ -185,3 +185,69 @@ export async function updateParentPassword(
     throw error;
   }
 }
+
+/**
+ * POST /api/profile/verify-parent-password - 验证家长密码
+ */
+export async function verifyParentPassword(
+  userId: string,
+  request: Request,
+  env: Env
+): Promise<Response> {
+  try {
+    // 解析请求数据
+    const body: any = await request.json();
+
+    // 验证请求数据格式
+    if (!body || typeof body.passwordHash !== 'string') {
+      return jsonResponse<ApiResponse>(
+        {
+          success: false,
+          error: 'Invalid request body, passwordHash is required',
+          code: 'BAD_REQUEST',
+        },
+        400
+      );
+    }
+
+    // 从数据库查询用户的密码哈希
+    const stmt = env.DB.prepare(
+      'SELECT parent_password_hash, is_parent_password_set FROM user_profiles WHERE user_id = ?'
+    );
+    const result = await stmt.bind(userId).first<{
+      parent_password_hash: string | null;
+      is_parent_password_set: number;
+    }>();
+
+    // 用户不存在
+    if (!result) {
+      return jsonResponse<ApiResponse>(
+        {
+          success: false,
+          error: 'User not found',
+          code: 'NOT_FOUND',
+        },
+        404
+      );
+    }
+
+    // 密码未设置
+    if (result.is_parent_password_set !== 1 || !result.parent_password_hash) {
+      return jsonResponse<ApiResponse>({
+        success: true,
+        data: { isValid: false, isPasswordSet: false },
+      });
+    }
+
+    // 验证密码
+    const isValid = result.parent_password_hash === body.passwordHash;
+
+    return jsonResponse<ApiResponse>({
+      success: true,
+      data: { isValid, isPasswordSet: true },
+    });
+  } catch (error) {
+    console.error('Error verifying parent password:', error);
+    throw error;
+  }
+}

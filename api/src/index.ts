@@ -2,7 +2,7 @@ import { Env } from './types';
 import { handleOptions, addCorsHeaders } from './middleware/cors';
 import { withErrorHandling } from './middleware/error';
 import { requireAuth } from './middleware/auth';
-import { getProfile, updateProfile, updateParentPassword } from './routes/profile';
+import { getProfile, updateProfile, updateParentPassword, verifyParentPassword } from './routes/profile';
 import { handleLogin, handleCallback, handleMe, handleLogout } from './routes/auth';
 
 /**
@@ -19,6 +19,7 @@ export default {
     const response = await withErrorHandling(async () => {
       const url = new URL(request.url);
       const path = url.pathname;
+      console.log(`[DEBUG] ${request.method} ${path}`);
 
       // 健康检查
       if (path === '/health') {
@@ -59,6 +60,13 @@ export default {
       if (path === '/api/profile/parent-password' && request.method === 'POST') {
         return requireAuth(request, env, (req, env, userId) =>
           updateParentPassword(userId, req, env)
+        );
+      }
+
+      // 验证家长密码 API
+      if (path === '/api/profile/verify-parent-password' && request.method === 'POST') {
+        return requireAuth(request, env, (req, env, userId) =>
+          verifyParentPassword(userId, req, env)
         );
       }
 

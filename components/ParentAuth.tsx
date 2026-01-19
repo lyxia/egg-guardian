@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, Eye, EyeOff, CheckCircle } from 'lucide-react';
-import { loadParentAuth, verifyPassword, setPassword } from '../services/dataService';
+import { verifyPassword, setPassword } from '../services/dataService';
+import { getApiService, isApiServiceInitialized } from '../services/apiServiceInstance';
 
 interface ParentAuthProps {
   onVerified: () => void;
@@ -14,40 +15,69 @@ const ParentAuth: React.FC<ParentAuthProps> = ({ onVerified, onCancel }) => {
   const [isSettingPassword, setIsSettingPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isPasswordSet, setIsPasswordSet] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    const auth = loadParentAuth();
-    setIsPasswordSet(auth?.state.isPasswordSet || false);
-    setIsSettingPassword(!auth?.state.isPasswordSet);
+    const checkPasswordStatus = async () => {
+      if (!isApiServiceInitialized()) {
+        setError('未登录，无法使用家长验证功能');
+        return;
+      }
+
+      try {
+        const apiService = getApiService();
+        const profile = await apiService.getProfile();
+        const passwordSet = profile.parentAuth?.isPasswordSet || false;
+        setIsPasswordSet(passwordSet);
+        setIsSettingPassword(!passwordSet);
+      } catch (error) {
+        console.error('检查密码状态失败:', error);
+        setError('加载失败，请重试');
+      }
+    };
+
+    checkPasswordStatus();
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true);
 
-    if (isSettingPassword) {
-      // 设置新密码
-      if (!password || password.length < 4) {
-        setError('密码至少需要4位');
-        return;
-      }
-      if (password !== confirmPassword) {
-        setError('两次输入的密码不一致');
-        return;
-      }
-      setPassword(password);
-      setIsSettingPassword(false);
-      setIsPasswordSet(true);
-      setPasswordValue('');
-      setConfirmPassword('');
-    } else {
-      // 验证密码
-      if (verifyPassword(password)) {
-        onVerified();
+    try {
+      if (isSettingPassword) {
+        // 设置新密码
+        if (!password || password.length < 4) {
+          setError('密码至少需要4位');
+          return;
+        }
+        if (password !== confirmPassword) {
+          setError('两次输入的密码不一致');
+          return;
+        }
+        
+        try {
+          await setPassword(password);
+          setIsSettingPassword(false);
+          setIsPasswordSet(true);
+          setPasswordValue('');
+          setConfirmPassword('');
+        } catch (error) {
+          console.error('设置密码失败:', error);
+          setError('设置密码失败，请重试');
+        }
       } else {
-        setError('密码错误，请重试');
-        setPasswordValue('');
+        // 验证密码
+        const isValid = await verifyPassword(password);
+        if (isValid) {
+          onVerified();
+        } else {
+          setError('密码错误，请重试');
+          setPasswordValue('');
+        }
       }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -145,9 +175,10 @@ const ParentAuth: React.FC<ParentAuthProps> = ({ onVerified, onCancel }) => {
             )}
             <button
               type="submit"
-              className="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-colors shadow-lg"
+              disabled={isLoading}
+              className="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSettingPassword ? '设置密码' : '验证'}
+              {isLoading ? '处理中...' : (isSettingPassword ? '设置密码' : '验证')}
             </button>
           </div>
         </form>

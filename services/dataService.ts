@@ -1,6 +1,7 @@
-import { AppState, DailyLog, Task, UserProfile, TaskStatus, EggfocusParentAuth } from '../types';
+import { AppState, DailyLog, Task, UserProfile, TaskStatus } from '../types';
 import { INITIAL_USER, INITIAL_TASKS, STORAGE_KEY, DAILY_SALARY_TARGET } from '../constants';
-import { loadSyncedState, syncData, loadEggfocusParentAuth, saveEggfocusParentAuth } from './dataAdapter';
+import { loadSyncedState, syncData } from './dataAdapter';
+import { getApiService, isApiServiceInitialized } from './apiServiceInstance';
 
 export { DAILY_SALARY_TARGET };
 
@@ -15,45 +16,43 @@ export const saveState = (state: AppState) => {
 };
 
 /**
- * 加载家长认证数据
+ * 验证密码（从云端验证）
  */
-export const loadParentAuth = (): EggfocusParentAuth | null => {
-  return loadEggfocusParentAuth();
-};
-
-/**
- * 保存家长认证数据
- */
-export const saveParentAuth = (auth: EggfocusParentAuth) => {
-  saveEggfocusParentAuth(auth);
-};
-
-/**
- * 验证密码
- */
-export const verifyPassword = (password: string): boolean => {
-  const auth = loadParentAuth();
-  if (!auth || !auth.state.isPasswordSet) {
+export const verifyPassword = async (password: string): Promise<boolean> => {
+  if (!isApiServiceInitialized()) {
+    console.error('API 服务未初始化，无法验证密码');
     return false;
   }
-  // 简单的哈希比较（实际应用中应使用更安全的哈希算法）
-  // 这里假设密码哈希是简单的字符串转换
-  const inputHash = simpleHash(password);
-  return inputHash === auth.state.passwordHash;
+
+  try {
+    const apiService = getApiService();
+    const hash = simpleHash(password);
+    const isValid = await apiService.verifyParentPassword(hash);
+    return isValid;
+  } catch (error) {
+    console.error('验证密码失败:', error);
+    return false;
+  }
 };
 
 /**
- * 设置密码
+ * 设置密码（保存到云端）
  */
-export const setPassword = (password: string): void => {
+export const setPassword = async (password: string): Promise<void> => {
+  if (!isApiServiceInitialized()) {
+    throw new Error('API 服务未初始化，无法设置密码');
+  }
+
   const hash = simpleHash(password);
-  saveParentAuth({
-    state: {
-      passwordHash: hash,
-      isPasswordSet: true,
-    },
-    version: 0,
-  });
+  
+  try {
+    const apiService = getApiService();
+    await apiService.updateParentPassword(hash);
+    console.log('家长密码已保存到云端');
+  } catch (error) {
+    console.error('保存家长密码到云端失败:', error);
+    throw error;
+  }
 };
 
 /**
