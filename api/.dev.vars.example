@@ -1,0 +1,6 @@
+# Local development secrets for Wrangler
+# Copy this file to .dev.vars and fill in your values
+# .dev.vars is gitignored and will not be committed
+
+# JWT Secret for local development (can be any random string)
+JWT_SECRET=your-local-jwt-secret-here

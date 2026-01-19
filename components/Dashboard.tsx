@@ -10,9 +10,10 @@ interface DashboardProps {
   tasks: Task[];
   onStartSettlement: () => void;
   logs: DailyLog[];
+  currentUserId?: string | null;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ user, tasks, onStartSettlement, logs }) => {
+const Dashboard: React.FC<DashboardProps> = ({ user, tasks, onStartSettlement, logs, currentUserId }) => {
   const [isSalarySlipOpen, setIsSalarySlipOpen] = useState(false);
   const todayStr = getTodayDateString();
   const hasSettledToday = logs.some(log => log.date === todayStr);
@@ -27,6 +28,29 @@ const Dashboard: React.FC<DashboardProps> = ({ user, tasks, onStartSettlement, l
     <div className="flex flex-col h-full md:flex-row md:gap-8 transition-all">
       {/* Left Column: Balance & Stats */}
       <div className="shrink-0 md:w-80 lg:w-96 flex flex-col gap-6 mb-6 md:mb-0">
+        {/* 用户信息卡片 */}
+        {currentUserId && (
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-blue-50">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-guardian-blue to-blue-400 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                {currentUserId.charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-gray-500 font-medium">当前账号</p>
+                <p className="text-sm font-bold text-gray-800 truncate" title={currentUserId}>
+                  {currentUserId}
+                </p>
+              </div>
+              <div className="flex-shrink-0">
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-50 text-green-600 text-xs font-medium rounded-full">
+                  <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                  已登录
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="bg-gradient-to-br from-guardian-blue to-blue-400 rounded-3xl p-6 text-white shadow-lg relative overflow-hidden md:h-full md:flex md:flex-col md:justify-center">
           {/* Background Decorative Circles */}
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-white opacity-10 rounded-full"></div>

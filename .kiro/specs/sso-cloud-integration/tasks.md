@@ -1,0 +1,226 @@
+# 实施计划 - SSO 登录与云端数据同步
+
+## 任务列表
+
+- [x] 1. 创建后端 API 基础架构
+  - 初始化 Cloudflare Workers 项目
+  - 配置 wrangler.toml 和环境变量
+  - 创建数据库 schema 和迁移脚本
+  - 实现 Token 验证中间件
+  - 实现 CORS 处理中间件
+  - 实现统一错误处理中间件
+  - _需求: 2.1, 2.2, 2.3, 2.4, 2.5, 8.1, 8.2_
+
+- [x] 2. 实现用户资料 API
+  - [x] 2.1 实现 GET /api/profile 端点
+    - 从 D1 数据库查询用户资料
+    - 转换数据库格式为 API 响应格式
+    - 处理用户不存在的情况（404）
+    - _需求: 3.1, 8.5_
+  - [x] 2.2 实现 PUT /api/profile 端点
+    - 验证请求数据格式
+    - 更新用户资料到 D1 数据库
+    - 更新 updated_at 时间戳
+    - _需求: 3.2, 6.2_
+  - [x] 2.3 实现 POST /api/profile/parent-password 端点
+    - 接收家长密码哈希值
+    - 更新数据库中的密码字段
+    - _需求: 10.2, 10.4, 10.5_
+
+- [ ] 3. 实现任务管理 API
+  - [ ] 3.1 实现 GET /api/tasks 端点
+    - 查询当前用户的所有任务
+    - 按 sort_order 排序
+    - 将 JSON 字符串的 days 字段解析为数组
+    - _需求: 3.1, 10.3_
+  - [ ] 3.2 实现 POST /api/tasks 端点
+    - 生成任务 UUID
+    - 验证任务数据（title, icon, stars, days）
+    - 将 days 数组转换为 JSON 字符串存储
+    - 插入到数据库
+    - _需求: 3.2_
+  - [ ] 3.3 实现 PUT /api/tasks/:taskId 端点
+    - 验证任务所有权（user_id 匹配）
+    - 更新任务字段
+    - 更新 updated_at 时间戳
+    - _需求: 3.2_
+  - [ ] 3.4 实现 DELETE /api/tasks/:taskId 端点
+    - 验证任务所有权
+    - 从数据库删除任务
+    - _需求: 3.2_
+
+- [ ] 4. 实现日志管理 API
+  - [ ] 4.1 实现 GET /api/logs 端点
+    - 支持分页查询（page, limit）
+    - 支持日期范围筛选（startDate, endDate）
+    - 按日期降序排序
+    - 解析 tasks_status JSON 字段
+    - 返回分页元数据
+    - _需求: 3.1, 9.2_
+  - [ ] 4.2 实现 POST /api/logs 端点
+    - 生成日志 UUID
+    - 验证日志数据完整性
+    - 检查是否已存在当天日志（唯一约束）
+    - 将 tasks_status 数组转换为 JSON 字符串
+    - 插入到数据库
+    - _需求: 3.2, 7.2_
+
+- [x] 5. 创建前端认证服务
+  - [x] 5.1 实现 AuthService 类
+    - 实现 initiateLogin() 方法（重定向到 SSO）
+    - 实现 handleCallback() 方法（处理 SSO 回调）
+    - 实现 verifyToken() 方法（验证 Token）
+    - 实现 getUserInfo() 方法（获取用户信息）
+    - 实现 logout() 方法（登出）
+    - 实现 isAuthenticated() 方法（检查登录状态）
+    - 实现 getToken() 和 getUserId() 方法
+    - _需求: 1.2, 1.3, 1.4, 2.1, 2.2, 2.4, 6.1, 6.2_
+  - [x] 5.2 实现 CSRF 防护
+    - 生成随机 state 参数
+    - 在 sessionStorage 中存储 state
+    - 在回调时验证 state 参数
+    - _需求: 8.4_
+
+- [ ] 6. 创建前端 API 服务
+  - [x] 6.1 实现 ApiService 类基础结构
+    - 创建统一的 fetch 封装方法
+    - 自动添加 Authorization header
+    - 实现统一错误处理
+    - 401 错误自动跳转登录页
+    - _需求: 2.5, 7.1, 7.3_
+  - [x] 6.2 实现用户资料相关方法
+    - getProfile()
+    - updateProfile()
+    - updateParentPassword()
+    - _需求: 3.1, 3.2, 10.2, 10.5_
+  - [ ] 6.3 实现任务相关方法
+    - getTasks()
+    - createTask()
+    - updateTask()
+    - deleteTask()
+    - _需求: 3.1, 3.2_
+  - [ ] 6.4 实现日志相关方法
+    - getLogs()
+    - createLog()
+    - _需求: 3.1, 3.2_
+
+- [x] 7. 实现登录页面和认证流程
+  - [x] 7.1 创建 LoginPage 组件
+    - 显示应用标题和说明
+    - 显示"使用 SSO 登录"按钮
+    - 点击按钮调用 authService.initiateLogin()
+    - _需求: 1.1, 1.2_
+  - [x] 7.2 在 App.tsx 中集成认证流程
+    - 在应用启动时检查 URL 中的 token 参数
+    - 调用 authService.handleCallback() 处理回调
+    - 检查本地存储的 token 是否有效
+    - 未登录时显示 LoginPage
+    - 登录成功后显示主界面
+    - _需求: 1.3, 1.4, 1.5, 2.2, 6.1, 6.2_
+  - [x] 7.3 实现登出功能
+    - 在 Settings 组件添加登出按钮
+    - 调用 authService.logout()
+    - 清除本地 token 和用户数据
+    - 跳转到登录页
+    - _需求: 2.4_
+
+- [ ] 8. 实现数据同步功能
+  - [ ] 8.1 修改 dataService 支持云端同步
+    - 在 loadState() 中调用 apiService.getProfile() 和 getTasks()
+    - 在 saveState() 中调用 apiService.updateProfile()
+    - 实现立即同步策略（每次修改立即保存）
+    - _需求: 3.1, 3.2, 9.3_
+  - [ ] 8.2 实现任务同步
+    - 在添加任务时调用 apiService.createTask()
+    - 在更新任务时调用 apiService.updateTask()
+    - 在删除任务时调用 apiService.deleteTask()
+    - _需求: 3.2_
+  - [ ] 8.3 实现日志同步
+    - 在每日结算时调用 apiService.createLog()
+    - 处理重复创建的冲突（409 错误）
+    - _需求: 3.2, 7.2_
+  - [ ] 8.4 实现家长密码云端同步
+    - 修改 setPassword() 调用 apiService.updateParentPassword()
+    - 在登录后从云端加载家长密码设置
+    - _需求: 10.2, 10.3, 10.5_
+
+- [ ] 9. 实现数据迁移功能
+  - [ ] 9.1 创建数据迁移检测逻辑
+    - 在首次登录后检查 localStorage 是否有旧数据
+    - 检查云端是否已有数据
+    - 判断是否需要显示迁移对话框
+    - _需求: 4.1, 4.5_
+  - [ ] 9.2 创建 MigrationDialog 组件
+    - 显示迁移选项（上传本地数据、使用云端数据、取消）
+    - 根据云端数据状态显示不同选项
+    - _需求: 4.2_
+  - [ ] 9.3 实现数据上传逻辑
+    - 读取 localStorage 中的旧数据
+    - 转换为 API 格式
+    - 批量上传用户资料、任务和日志
+    - 显示上传进度和结果
+    - 标记本地数据已迁移
+    - _需求: 4.3, 4.4_
+
+- [ ] 10. 实现同步状态指示器
+  - [ ] 10.1 创建 SyncStatus 组件
+    - 显示同步状态图标（同步中、成功、失败、离线）
+    - 显示状态文字提示
+    - 自动隐藏成功提示（3秒后）
+    - _需求: 9.1, 9.4_
+  - [ ] 10.2 集成到主界面
+    - 在 Dashboard 或 App 顶部显示同步状态
+    - 在数据保存时更新状态
+    - 在网络错误时显示失败状态
+    - _需求: 9.1, 9.2_
+  - [ ] 10.3 添加手动同步按钮
+    - 在 Settings 中添加"立即同步"按钮
+    - 点击时触发完整数据同步
+    - 显示同步进度
+    - _需求: 9.5_
+
+- [ ] 11. 实现错误处理和用户提示
+  - [ ] 11.1 实现网络错误处理
+    - 捕获 API 调用失败
+    - 显示友好的错误提示
+    - 提供重试选项
+    - _需求: 7.1, 7.2, 7.4_
+  - [ ] 11.2 实现 Token 过期处理
+    - 检测 401 错误
+    - 清除无效 Token
+    - 引导用户重新登录
+    - _需求: 2.3, 7.3_
+  - [ ] 11.3 实现离线检测
+    - 监听网络状态变化
+    - 显示离线模式提示
+    - 在网络恢复时自动同步
+    - _需求: 5.1, 5.3_
+  - [ ] 11.4 实现日志记录
+    - 在控制台记录所有错误
+    - 记录 API 调用详情
+    - 便于调试和故障排查
+    - _需求: 7.5_
+
+- [ ] 12. 部署和配置
+  - [ ] 12.1 配置 Cloudflare Workers
+    - 创建 wrangler.toml 配置文件
+    - 配置 D1 数据库绑定
+    - 配置环境变量（SSO_URL 等）
+    - 部署 Worker 到 Cloudflare
+    - _需求: 8.1_
+  - [ ] 12.2 初始化数据库
+    - 运行 schema.sql 创建表结构
+    - 创建必要的索引
+    - 验证数据库连接
+    - _需求: 3.5_
+  - [ ] 12.3 配置前端环境变量
+    - 创建 .env.local 文件
+    - 配置 VITE_SSO_URL
+    - 配置 VITE_API_URL
+    - 配置 VITE_CALLBACK_URL
+    - _需求: 1.2, 8.1_
+  - [ ] 12.4 更新 GitHub Pages 部署配置
+    - 确保环境变量在构建时正确注入
+    - 测试生产环境部署
+    - _需求: 8.1_
+

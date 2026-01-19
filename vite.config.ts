@@ -5,13 +5,20 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
-    const base = process.env.NODE_ENV === 'production' ? '/egg-guardian/' : '/';
-    
+    // Using root path for Cloudflare Pages deployment
+    const base = '/';
+
     return {
       base,
       server: {
         port: 3000,
         host: '0.0.0.0',
+        allowedHosts: ['childrenlearn.activing.fun'],
+        hmr: {
+          protocol: 'wss',
+          host: 'childrenlearn.activing.fun',
+          clientPort: 443,
+        },
       },
       plugins: [
         react(),
@@ -66,17 +73,17 @@ export default defineConfig(({ mode }) => {
             background_color: '#FFFFFF',
             display: 'standalone',
             orientation: 'any',
-            start_url: base,
-            scope: base,
+            start_url: '/',
+            scope: '/',
             icons: [
               {
-                src: `${base}icon-192x192.png`,
+                src: '/icon-192x192.png',
                 sizes: '192x192',
                 type: 'image/png',
                 purpose: 'any maskable'
               },
               {
-                src: `${base}icon-512x512.png`,
+                src: '/icon-512x512.png',
                 sizes: '512x512',
                 type: 'image/png',
                 purpose: 'any maskable'

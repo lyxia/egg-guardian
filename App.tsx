@@ -5,7 +5,9 @@ import Dashboard from './components/Dashboard';
 import Settings from './components/Settings';
 import SettlementModal from './components/SettlementModal';
 import InstallPrompt from './components/InstallPrompt';
+import LoginPage from './components/LoginPage';
 import { Settings as SettingsIcon, LayoutDashboard, History } from 'lucide-react';
+import { createAuthService } from './services/authService';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -17,8 +19,60 @@ const App: React.FC = () => {
   const [isSettlementOpen, setIsSettlementOpen] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
 
-  // Initialize
+  // 认证状态
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  // 创建 AuthService 实例 (使用空字符串使 API 调用相对于同源)
+  const authService = createAuthService(
+    import.meta.env.VITE_API_URL || ''
+  );
+
+  // 检查认证状态和处理 SSO 回调
   useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        // 1. 检查是否是 SSO 回调
+        const callbackResult = authService.checkCallback();
+
+        if (callbackResult.success) {
+          console.log('SSO login successful');
+          // 登录成功，继续获取用户信息
+        } else if (callbackResult.error) {
+          console.error('Login failed:', callbackResult.error);
+          setIsAuthenticated(false);
+          setIsCheckingAuth(false);
+          return;
+        }
+
+        // 2. 检查当前登录状态
+        const user = await authService.getCurrentUser();
+
+        if (user) {
+          console.log('User authenticated:', user.userId);
+          setIsAuthenticated(true);
+          setCurrentUserId(user.userId);
+        } else {
+          console.log('User not authenticated');
+          setIsAuthenticated(false);
+          setCurrentUserId(null);
+        }
+      } catch (error) {
+        console.error('Error checking authentication:', error);
+        setIsAuthenticated(false);
+      } finally {
+        setIsCheckingAuth(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  // Initialize - 只在认证成功后加载数据
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
     const data = loadState();
     
     // Check Weekly Reset Logic
@@ -31,14 +85,18 @@ const App: React.FC = () => {
     setUser(updatedUser);
     setTasks(data.tasks);
     setLogs(data.logs || []);
-  }, []);
+  }, [isAuthenticated]);
 
   // Persistence
   useEffect(() => {
-    if (user && tasks) {
+    if (user && tasks && isAuthenticated) {
       saveState({ user, tasks, logs });
     }
-  }, [user, tasks, logs]);
+  }, [user, tasks, logs, isAuthenticated]);
+
+  const handleLogin = () => {
+    authService.initiateLogin();
+  };
 
   const handleSettlementConfirm = (completionMap: Record<string, boolean>) => {
     if (!user) return;
@@ -56,7 +114,34 @@ const App: React.FC = () => {
     }
   };
 
-  if (!user) return <div className="flex h-screen items-center justify-center bg-white text-guardian-blue">Loading Egg Guardian...</div>;
+  // 检查认证状态中
+  if (isCheckingAuth) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-white text-guardian-blue">
+        <div className="text-center space-y-4">
+          <div className="text-6xl animate-bounce">🥚</div>
+          <div className="text-xl font-bold">正在加载...</div>
+        </div>
+      </div>
+    );
+  }
+
+  // 未登录，显示登录页
+  if (!isAuthenticated) {
+    return <LoginPage onLogin={handleLogin} />;
+  }
+
+  // 数据加载中
+  if (!user) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-white text-guardian-blue">
+        <div className="text-center space-y-4">
+          <div className="text-6xl animate-bounce">🥚</div>
+          <div className="text-xl font-bold">加载数据中...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen w-screen bg-white text-guardian-text font-sans relative overflow-hidden flex transition-all">
@@ -97,7 +182,8 @@ const App: React.FC = () => {
                user={user} 
                tasks={tasks} 
                logs={logs}
-               onStartSettlement={() => setIsSettlementOpen(true)} 
+               onStartSettlement={() => setIsSettlementOpen(true)}
+               currentUserId={currentUserId}
              />
            ) : (
              <Settings 
@@ -105,7 +191,16 @@ const App: React.FC = () => {
                onUpdateTasks={setTasks} 
                onClose={() => setCurrentView('dashboard')}
                user={user}
-               onUpdateUser={(updatedUser) => setUser(updatedUser)}
+               onUpdateUser={(updatedUser: UserProfile) => setUser(updatedUser)}
+               onLogout={async () => {
+                 await authService.logout();
+                 setIsAuthenticated(false);
+                 setCurrentUserId(null);
+                 setUser(null);
+                 setTasks([]);
+                 setLogs([]);
+               }}
+               currentUserId={currentUserId}
              />
            )}
         </main>

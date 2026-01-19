@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl:*)",
+      "Bash(timeout 10 wrangler dev:*)",
+      "Bash(pkill:*)",
+      "Bash(./start-dev.sh sleep 5 echo \"=== Backend Status ===\" curl -s http://localhost:8787/health)",
+      "Bash(./start-dev.sh)",
+      "Bash(/Users/liuyunxia/Documents/左思彤/apps/egg-guardian/start-dev.sh:*)",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItMDAxIiwiZW1haWwiOiJkZW1vQGV4YW1wbGUuY29tIiwidXNlcm5hbWUiOiJkZW1vIiwic2Vzc2lvbklkIjoiNjM0NTdmY2UtOGRiNC00YjYxLWJmZGQtNDIxOTNlNDU0NTJlIiwiaWF0IjoxNzY4NzQ4NDg3LCJleHAiOjE3Njg4MzQ4ODd9.bL8w-SQQTs-Y4cTANhQ8knOH05IkNdDCtWRO_p_JXUY\" curl -s http://localhost:8791/sso/verify -X POST -H \"Content-Type: application/json\" -d \"{\"\"token\"\":\"\"$TOKEN\"\"}\")",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)",
+      "Bash(wrangler d1 execute:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run dev:*)",
+      "Bash(bash:*)",
+      "Bash(find:*)"
+    ]
+  }
+}

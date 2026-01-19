@@ -1,0 +1,158 @@
+name: Deploy
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch: # Allow manual deployment
+
+jobs:
+  deploy:
+    name: Deploy to Cloudflare Workers
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Services
+        run: pnpm build
+
+      - name: Setup Wrangler
+        run: pnpm add -g wrangler
+
+      - name: Create Database
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          # Check if database exists
+          DB_LIST=$(wrangler d1 list --json)
+          DB_ID=$(echo "$DB_LIST" | jq -r '.[] | select(.name == "edgeauth-db") | .uuid')
+
+          if [ -z "$DB_ID" ] || [ "$DB_ID" == "null" ]; then
+            echo "Creating database edgeauth-db..."
+            # Create database without --json flag (not supported)
+            wrangler d1 create edgeauth-db
+            # Wait a moment for the database to be created, then get the ID
+            echo "Waiting for database to be created..."
+            sleep 3
+            DB_LIST=$(wrangler d1 list --json)
+            DB_ID=$(echo "$DB_LIST" | jq -r '.[] | select(.name == "edgeauth-db") | .uuid')
+            if [ -z "$DB_ID" ] || [ "$DB_ID" == "null" ]; then
+              echo "Error: Failed to get database ID after creation"
+              exit 1
+            fi
+            echo "Database created with ID: $DB_ID"
+          else
+            echo "Database edgeauth-db already exists with ID: $DB_ID"
+          fi
+
+          echo "DB_ID=$DB_ID" >> $GITHUB_ENV
+
+      - name: Update Wrangler Configs
+        run: |
+          # Update all wrangler.toml files with the database ID
+          for config in wrangler.toml services/*/wrangler.toml; do
+            echo "Updating $config..."
+            sed -i "s/database_id = \"placeholder\".*/database_id = \"$DB_ID\"/" "$config"
+          done
+
+      - name: Apply Migrations
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          echo "Applying database migrations..."
+          wrangler d1 migrations apply edgeauth-db --remote
+
+      - name: Configure Secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          PLUNK_API_KEY: ${{ secrets.PLUNK_API_KEY }}
+        run: |
+          echo "Configuring Worker secrets..."
+
+          # Set JWT_SECRET for all services
+          for service in edgeauth-admin edgeauth-account edgeauth-sso edgeauth-oauth; do
+            echo "Setting JWT_SECRET for $service..."
+            echo "$JWT_SECRET" | wrangler secret put JWT_SECRET --name $service
+          done
+
+          # Set PLUNK_API_KEY for account-api (email service)
+          echo "Setting PLUNK_API_KEY for edgeauth-account..."
+          echo "$PLUNK_API_KEY" | wrangler secret put PLUNK_API_KEY --name edgeauth-account
+
+      - name: Deploy Admin API
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        working-directory: services/admin-api
+        run: wrangler deploy
+
+      - name: Deploy Account API
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        working-directory: services/account-api
+        run: wrangler deploy
+
+      - name: Deploy SSO API
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        working-directory: services/sso-api
+        run: wrangler deploy
+
+      - name: Deploy OAuth API
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        working-directory: services/oauth-api
+        run: wrangler deploy
+
+      - name: Deploy Account Portal (Frontend)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        working-directory: apps/account-portal
+        run: |
+          # Check if Pages project exists, create if not
+          if ! wrangler pages project list 2>&1 | grep -q "eggauth-account-portal"; then
+            echo "Creating Pages project eggauth-account-portal..."
+            wrangler pages project create eggauth-account-portal --production-branch=main
+          fi
+
+          # Deploy to Pages (will use custom domain: account.activing.fun)
+          wrangler pages deploy dist --project-name=eggauth-account-portal --commit-dirty=true
+
+      - name: Deployment Summary
+        run: |
+          echo "## ✅ Deployment Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Database:** edgeauth-db (\`$DB_ID\`)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Services Deployed:**" >> $GITHUB_STEP_SUMMARY
+          echo "- edgeauth-admin" >> $GITHUB_STEP_SUMMARY
+          echo "- edgeauth-account" >> $GITHUB_STEP_SUMMARY
+          echo "- edgeauth-sso" >> $GITHUB_STEP_SUMMARY
+          echo "- edgeauth-oauth" >> $GITHUB_STEP_SUMMARY
+          echo "- eggauth-account-portal (Pages → account.activing.fun)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Next Steps:**" >> $GITHUB_STEP_SUMMARY
+          echo "1. Verify secrets are set: \`JWT_SECRET\`, \`PLUNK_API_KEY\`" >> $GITHUB_STEP_SUMMARY
+          echo "2. Test API endpoints" >> $GITHUB_STEP_SUMMARY

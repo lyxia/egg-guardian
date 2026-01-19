@@ -11,6 +11,8 @@ interface SettingsProps {
   onClose: () => void;
   user?: UserProfile;
   onUpdateUser?: (user: UserProfile) => void;
+  onLogout?: () => void;
+  currentUserId?: string | null;
 }
 
 const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
@@ -23,7 +25,7 @@ const EMOJI_OPTIONS = [
   "✨", "🎯"
 ];
 
-const Settings: React.FC<SettingsProps> = ({ tasks, onUpdateTasks, onClose, user, onUpdateUser }) => {
+const Settings: React.FC<SettingsProps> = ({ tasks, onUpdateTasks, onClose, user, onUpdateUser, onLogout, currentUserId }) => {
   // Preview logic
   const { valuePerStar } = useMemo(() => calculateStarValue(tasks), [tasks]);
   
@@ -59,6 +61,14 @@ const Settings: React.FC<SettingsProps> = ({ tasks, onUpdateTasks, onClose, user
         ...user,
         isMuted: !user.isMuted,
       });
+    }
+  };
+
+  const handleLogout = async () => {
+    if (confirm('确定要退出登录吗？退出后需要重新登录才能访问您的数据。')) {
+      if (onLogout) {
+        await onLogout();
+      }
     }
   };
 
@@ -151,6 +161,26 @@ const Settings: React.FC<SettingsProps> = ({ tasks, onUpdateTasks, onClose, user
             </button>
           </div>
           <div className="space-y-3">
+            {/* 用户信息展示 */}
+            {currentUserId && (
+              <div className="pb-3 border-b border-blue-200">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 bg-gradient-to-br from-guardian-blue to-blue-400 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                    {currentUserId.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-600 font-medium">当前登录账号</p>
+                    <p className="text-sm font-bold text-gray-800 truncate" title={currentUserId}>
+                      {currentUserId}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-lg">
+                  <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                  <span>已登录，数据已同步到云端</span>
+                </div>
+              </div>
+            )}
             {user && (
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-700">静音模式</span>
@@ -177,6 +207,14 @@ const Settings: React.FC<SettingsProps> = ({ tasks, onUpdateTasks, onClose, user
             >
               修改家长密码
             </button>
+            {onLogout && (
+              <button
+                onClick={handleLogout}
+                className="w-full text-left text-sm text-red-600 hover:text-red-800 font-medium pt-2 border-t border-blue-200"
+              >
+                退出登录
+              </button>
+            )}
           </div>
         </div>
       )}
