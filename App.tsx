@@ -4,7 +4,6 @@ import { loadState, saveState, checkWeeklySalaryReset, processSettlement } from 
 import Dashboard from './components/Dashboard';
 import Settings from './components/Settings';
 import SettlementModal from './components/SettlementModal';
-import InstallPrompt from './components/InstallPrompt';
 import LoginPage from './components/LoginPage';
 import { Settings as SettingsIcon, LayoutDashboard, History } from 'lucide-react';
 import { createAuthService } from './services/authService';
@@ -209,15 +208,12 @@ const App: React.FC = () => {
 
       {/* Modals */}
       {isSettlementOpen && (
-        <SettlementModal 
-          tasks={tasks} 
-          onConfirm={handleSettlementConfirm} 
-          onCancel={() => setIsSettlementOpen(false)} 
+        <SettlementModal
+          tasks={tasks}
+          onConfirm={handleSettlementConfirm}
+          onCancel={() => setIsSettlementOpen(false)}
         />
       )}
-
-      {/* PWA Install Prompt */}
-      <InstallPrompt />
     </div>
   );
 };
