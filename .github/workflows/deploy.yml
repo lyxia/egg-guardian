@@ -67,17 +67,9 @@ jobs:
       - name: Update wrangler.toml with database ID
         run: |
           cd api
-          # Update the database_id in wrangler.toml
-          if grep -q "^database_id" wrangler.toml; then
-            sed -i "s/^database_id.*/database_id = \"${{ steps.d1-setup.outputs.database_id }}\"/" wrangler.toml
-          else
-            sed -i "/database_name = \"egg-guardian-db\"/a database_id = \"${{ steps.d1-setup.outputs.database_id }}\"" wrangler.toml
-          fi
-
-          # Also update development environment
-          if grep -q "^\[\[env\.development\.d1_databases\]\]" wrangler.toml; then
-            sed -i "/^\[\[env\.development\.d1_databases\]\]/,/^database_id/{s/^database_id.*/database_id = \"${{ steps.d1-setup.outputs.database_id }}\"/}" wrangler.toml
-          fi
+          # Replace placeholder with actual database ID
+          sed -i 's/database_id = "placeholder"/database_id = "${{ steps.d1-setup.outputs.database_id }}"/' wrangler.toml
+          echo "✅ Injected database_id into production environment: ${{ steps.d1-setup.outputs.database_id }}"
 
       - name: Apply Database Migrations
         run: |

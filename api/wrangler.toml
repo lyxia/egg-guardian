@@ -20,6 +20,12 @@ CALLBACK_URL = "https://childrenlearn.activing.fun/api/auth/callback"
 [env.production]
 name = "egg-guardian-api"
 vars = { SSO_URL = "https://api.activing.fun", ALLOWED_ORIGIN = "https://childrenlearn.activing.fun", CALLBACK_URL = "https://childrenlearn.activing.fun/api/auth/callback" }
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "egg-guardian-db"
+database_id = "placeholder"  # Will be replaced by GitHub Actions workflow during deployment
+
 # 开发环境配置
 [env.development]
 name = "egg-guardian-api-dev"
