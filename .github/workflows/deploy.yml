@@ -99,6 +99,24 @@ jobs:
         env:
           NODE_ENV: production
 
+      - name: Create or Check Pages Project
+        id: pages-setup
+        run: |
+          # Check if project exists
+          PROJECT_EXISTS=$(wrangler pages project list --json 2>/dev/null | jq -r '.[] | select(.name=="egg-guardian") | .name' || echo "")
+
+          if [ -z "$PROJECT_EXISTS" ]; then
+            echo "Creating Pages project: egg-guardian"
+            wrangler pages project create egg-guardian --production-branch=main
+            echo "project_created=true" >> $GITHUB_OUTPUT
+          else
+            echo "Pages project already exists: egg-guardian"
+            echo "project_created=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
       - name: Deploy to Cloudflare Pages
         run: |
           wrangler pages deploy dist \
@@ -139,9 +157,14 @@ jobs:
       - name: Deployment Summary
         run: |
           echo "✅ Deployment complete!"
+          echo ""
           echo "📦 Database: egg-guardian-db (${{ steps.d1-setup.outputs.database_id }})"
           echo "⚡ Worker: egg-guardian-api (production)"
-          echo "🌐 Pages: egg-guardian"
+          if [ "${{ steps.pages-setup.outputs.project_created }}" == "true" ]; then
+            echo "🌐 Pages: egg-guardian (newly created)"
+          else
+            echo "🌐 Pages: egg-guardian (updated)"
+          fi
           echo "🔗 Service Binding: API → egg-guardian-api"
           echo ""
           echo "Next steps:"
